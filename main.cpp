@@ -27,9 +27,6 @@ using namespace std;
 
 #include "base64.h"
 
-#include <wiringPi.h>
-#include <wiringPiSPI.h>
-
 typedef bool boolean;
 typedef unsigned char byte;
 
@@ -67,6 +64,9 @@ int ssPin = 6;
 int dio0  = 7;
 int RST   = 0;
 
+#define LOW 		0
+#define HIGH 		1
+
 // Set spreading factor (SF7 - SF12)
 sf_t sf = SF7;
 
@@ -85,9 +85,9 @@ static char description[64] = "";                        /* used for free form d
 
 // define servers
 // TODO: use host names and dns
-#define SERVER1 "54.72.145.119"    // The Things Network: croft.thethings.girovito.nl
-//#define SERVER2 "192.168.1.10"      // local
-#define PORT 1700                   // The port on which to send data
+#define SERVER1 "54.72.145.119"    		// The Things Network: croft.thethings.girovito.nl
+//#define SERVER2 "192.168.1.10"      	// local
+#define PORT 1700                   	// The port on which to send data
 
 // #############################################
 // #############################################
@@ -162,11 +162,219 @@ static char description[64] = "";                        /* used for free form d
 #define TX_BUFF_SIZE  2048
 #define STATUS_SIZE	  1024
 
+/* GPIO configuration, true if GPIO is exposed */
+const bool gpio_config[28] = {
+    true, /* GPIO 0 */
+    true, /* GPIO 1 */
+    false, /* GPIO 2 */
+    false, /* GPIO 3 */
+    false, /* GPIO 4 */
+    false, /* GPIO 5 */
+    true, /* GPIO 6 */
+    true, /* GPIO 7 */
+    true, /* GPIO 8 */
+    false, /* GPIO 9 */
+    false, /* GPIO 10 */
+    false, /* GPIO 11 */
+    true, /* GPIO 12 */
+    true, /* GPIO 13 */
+    true, /* GPIO 14 */
+    true, /* GPIO 15 */
+    true, /* GPIO 16 */
+    true, /* GPIO 17 */
+    true, /* GPIO 18 */
+    true, /* GPIO 19 */
+    true, /* GPIO 20 */
+    true, /* GPIO 21 */
+    true, /* GPIO 22 */
+    true, /* GPIO 23 */
+    true, /* GPIO 24 */
+    false, /* GPIO 25 */
+    false, /* GPIO 26 */
+    false, /* GPIO 27 */
+};
+
+/*
+ * Reserve a GPIO for this program's use.
+ * @gpio the GPIO pin to reserve.
+ * @return true if the reservation was successful.
+ */
+static bool gpio_reserve(int gpio) {
+    int fd; /* File descriptor for GPIO controller class */
+    char buf[3]; /* Write buffer */
+
+    /* Check if GPIO is valid */
+    if (gpio > 27 || !gpio_config[gpio]) {
+        return false;
+    }
+
+    /* Try to open GPIO controller class */
+    fd = open("/sys/class/gpio/export", O_WRONLY);
+    if (fd < 0) {
+        /* The file could not be opened */
+        log_message(LOG_DEBUG, "gpio_reserve: could not open /sys/class/gpio/export\r\n");
+        return false;
+    }
+
+    /* Prepare buffer */
+    sprintf(buf, "%d", gpio);
+
+    /* Try to reserve GPIO */
+    if (write(fd, buf, strlen(buf)) < 0) {
+        close(fd);
+        log_message(LOG_DEBUG, "gpio_reserve: could not write '%s' to /sys/class/gpio/export\r\n", buf);
+        return false;
+    }
+
+    /* Close the GPIO controller class */
+    if (close(fd) < 0) {
+        log_message(LOG_DEBUG, "gpio_reserve: could not close /sys/class/gpio/export\r\n");
+        return false;
+    }
+
+    /* Success */
+    return true;
+}
+
+/*
+ * Release a GPIO after use.
+ * @gpio the GPIO pin to release.
+ * @return true if the release was successful.
+ */
+static bool gpio_release(int gpio) {
+    int fd; /* File descriptor for GPIO controller class */
+    char buf[3]; /* Write buffer */
+
+    /* Check if GPIO is valid */
+    if (gpio > 27 || !gpio_config[gpio]) {
+        return false;
+    }
+
+    /* Try to open GPIO controller class */
+    fd = open("/sys/class/gpio/unexport", O_WRONLY);
+    if (fd < 0) {
+        /* The file could not be opened */
+        log_message(LOG_DEBUG, "gpio_release: could not open /sys/class/gpio/unexport\r\n");
+        return false;
+    }
+
+    /* Prepare buffer */
+    sprintf(buf, "%d", gpio);
+
+    /* Try to release GPIO */
+    if (write(fd, buf, strlen(buf)) < 0) {
+        log_message(LOG_DEBUG, "gpio_release: could not write /sys/class/gpio/unexport\r\n");
+        return false;
+    }
+
+    /* Close the GPIO controller class */
+    if (close(fd) < 0) {
+        log_message(LOG_DEBUG, "gpio_release: could not close /sys/class/gpio/unexport\r\n");
+        return false;
+    }
+
+    /* Success */
+    return true;
+}
+
+/*
+ * Set the direction of the GPIO port.
+ * @gpio the GPIO pin to release.
+ * @direction the direction of the GPIO port.
+ * @return true if the direction could be successfully set.
+ */
+static bool gpio_set_direction(int gpio, int direction) {
+    int fd; /* File descriptor for GPIO port */
+    char buf[33]; /* Write buffer */
+
+    /* Check if GPIO is valid */
+    if (gpio > 27 || !gpio_config[gpio]) {
+        return false;
+    }
+
+    /* Make the GPIO port path */
+    sprintf(buf, "/sys/class/gpio/gpio%d/direction", gpio);
+
+    /* Try to open GPIO port for writing only */
+    fd = open(buf, O_WRONLY);
+    if (fd < 0) {
+        /* The file could not be opened */
+        return false;
+    }
+
+    /* Set the port direction */
+    if (direction == GPIO_OUT) {
+        if (write(fd, "out", 3) < 0) {
+            return false;
+        }
+    } else {
+        if (write(fd, "in", 2) < 0) {
+            return false;
+        }
+    }
+
+    /* Close the GPIO port */
+    if (close(fd) < 0) {
+        return false;
+    }
+
+    /* Success */
+    return true;
+}
+
+/*
+ * Set the state of the GPIO port.
+ * @gpio the GPIO pin to set the state for.
+ * @state 1 or 0
+ * @return true if the state change was successful.
+ */
+static bool gpio_set_state(int gpio, int state) {
+    int fd; /* File descriptor for GPIO port */
+    char buf[29]; /* Write buffer */
+
+    /* Check if GPIO is valid */
+    if (gpio > 27 || !gpio_config[gpio]) {
+        return false;
+    }
+
+    /* Make the GPIO port path */
+    sprintf(buf, "/sys/class/gpio/gpio%d/value", gpio);
+
+    /* Try to open GPIO port */
+    fd = open(buf, O_WRONLY);
+    if (fd < 0) {
+        /* The file could not be opened */
+        return false;
+    }
+
+    /* Set the port state */
+    if (write(fd, (state == GPIO_HIGH ? "1" : "0"), 1) < 0) {
+        return false;
+    }
+
+    /* Close the GPIO port */
+    if (close(fd) < 0) {
+        return false;
+    }
+
+    /* Success */
+    return true;
+}
+
 void die(const char *s)
 {
     perror(s);
     exit(1);
 }
+
+
+static void digitalWrite(int gpio, int state)
+{
+    gpio_reserve(gpio);
+    gpio_set_direction(gpio, GPIO_OUT);
+    gpio_set_state(gpio, state);
+    gpio_release(gpio);
+} 
 
 void selectreceiver()
 {
@@ -240,7 +448,6 @@ boolean receivePkt(char *payload)
 
 void SetupLoRa()
 {
-    
     digitalWrite(RST, HIGH);
     delay(100);
     digitalWrite(RST, LOW);
