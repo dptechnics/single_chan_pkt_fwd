@@ -19,6 +19,9 @@
 #include <cstdlib>
 #include <sys/time.h>
 #include <cstring>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <sys/ioctl.h>
 #include <net/if.h>
@@ -361,6 +364,54 @@ static bool gpio_set_state(int gpio, int state) {
     return true;
 }
 
+/*
+ * Get the state of the GPIO port.
+ * @gpio the gpio pin to get the state from.
+ * @return GPIO_HIGH if the pin is HIGH, GPIO_LOW if the pin is low. GPIO_ERR
+ * when an error occured. 
+ */
+static int gpio_get_state(int gpio) {
+    int fd;             /* File descriptor for GPIO port */
+    char buf[29];       /* Write buffer */
+    char port_state; /* Character indicating the port state */
+    int state; /* API integer indicating the port state */
+
+    /* Check if GPIO is valid */
+    if (gpio > 27 || !gpio_config[gpio]) {
+        return LOW;
+    }
+
+    /* Make the GPIO port path */
+    sprintf(buf, "/sys/class/gpio/gpio%d/value", gpio);
+
+    /* Try to open GPIO port */
+    fd = open(buf, O_RDONLY);
+    if (fd < 0) {
+        /* The file could not be opened */
+        log_message(LOG_DEBUG, "gpio_get_state: could not open /sys/class/gpio/gpio%d/value\r\n", gpio);
+        return LOW;
+    }
+
+    /* Read the port state */
+    if (read(fd, &port_state, 1) < 0) {
+        close(fd);
+        log_message(LOG_DEBUG, "gpio_get_state: could not read /sys/class/gpio/gpio%d/value\r\n", gpio);
+        return LOW;
+    }
+
+    /* Translate the port state into API state */
+    state = port_state == '1' ? HIGH : LOW;
+
+    /* Close the GPIO port */
+    if (close(fd) < 0) {
+        log_message(LOG_DEBUG, "gpio_get_state: could not close /sys/class/gpio/gpio%d/value\r\n", gpio);
+        return LOW;
+    }
+
+    /* Return the state */
+    return state;
+}
+
 void die(const char *s)
 {
     perror(s);
@@ -375,6 +426,32 @@ static void digitalWrite(int gpio, int state)
     gpio_set_state(gpio, state);
     gpio_release(gpio);
 } 
+
+/*
+ * Read the state of the port. The port can be input
+ * or output.
+ * @gpio the GPIO pin to read from.
+ * @return GPIO_HIGH if the pin is HIGH, GPIO_LOW if the pin is low. Output
+ * is -1 when an error occurred.
+ */
+static void digitalRead(int gpio) {
+    int state; /* The port state */
+
+    /* Reserve the port */
+    if (!gpio_reserve(gpio)) {
+        return -1;
+    }
+
+    /* Read the port */
+    state = gpio_get_state(gpio);
+
+    if (!gpio_release(gpio)) {
+        return -1;
+    }
+
+    /* Return the port state */
+    return state;
+}
 
 void selectreceiver()
 {
