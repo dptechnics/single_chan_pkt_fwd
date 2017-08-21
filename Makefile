@@ -1,9 +1,6 @@
 # single_chan_pkt_fwd
 # Single Channel LoRaWAN Gateway
 
-CC=gcc
-CFLAGS=-c -Wall -std=gnu99
-
 all: single_chan_pkt_fwd
 
 single_chan_pkt_fwd: base64.o main.o
