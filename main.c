@@ -97,7 +97,7 @@ int   alt=0;
 #define READ_ACCESS     0x00
 #define WRITE_ACCESS    0x80
 #define SPI_SPEED       8000000
-#define SPI_DEV_PATH    "/dev/spidev0.0"
+#define SPI_DEV_PATH    "/dev/spidev1.0"
 
 /* Informal status fields */
 static char platform[24]    = "Single Channel Gateway";  /* platform definition */
@@ -106,10 +106,10 @@ static char description[64] = "";                        /* used for free form d
 
 // define servers
 // TODO: use host names and dns
-#define SERVER1 "54.72.145.119"    		// The Things Network: croft.thethings.girovito.nl
+#define SERVER1 "127.0.0.1"    		// The Things Network: croft.thethings.girovito.nl
 //#define SERVER2 "192.168.1.10"      	// local
 #define PORT 1700                   	// The port on which to send data
-#define PORTNAME "1700"
+#define PORTNAME "1680"
 
 // #############################################
 // #############################################
