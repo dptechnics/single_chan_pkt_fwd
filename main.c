@@ -622,7 +622,7 @@ static int lgw_spi_r(uint8_t address, uint8_t *data) {
 
 uint8_t readRegister(uint8_t addr)
 {
-    uint8_t data;
+    uint8_t data = 0x00;
 
     selectreceiver();
     lgw_spi_r(addr, &data);
