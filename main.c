@@ -13,7 +13,6 @@
  *
  */
 
-#define __USE_GNU
 #define _POSIX_C_SOURCE 200112L
 
 #include <stdint.h>
@@ -25,7 +24,6 @@
 #include <string.h>
 #include <sys/time.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <net/if.h>
 #include <stdbool.h>
@@ -37,8 +35,8 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
-       #include <sys/socket.h>
-       #include <netdb.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include "base64.h"
 
@@ -433,7 +431,7 @@ static int gpio_get_state(int gpio) {
     return state;
 }
 
-void die(const char *s)
+static void die(const char *s)
 {
     perror(s);
     exit(1);
@@ -474,12 +472,12 @@ static int digitalRead(int gpio) {
     return state;
 }
 
-void selectreceiver()
+static void selectreceiver()
 {
     digitalWrite(ssPin, LOW);
 }
 
-void unselectreceiver()
+static void unselectreceiver()
 {
     digitalWrite(ssPin, HIGH);
 }
@@ -620,7 +618,7 @@ static int lgw_spi_r(uint8_t address, uint8_t *data) {
 }
 
 
-uint8_t readRegister(uint8_t addr)
+static uint8_t readRegister(uint8_t addr)
 {
     uint8_t data = 0x00;
 
@@ -631,7 +629,7 @@ uint8_t readRegister(uint8_t addr)
     return data;
 }
 
-void writeRegister(uint8_t addr, uint8_t value)
+static void writeRegister(uint8_t addr, uint8_t value)
 {
     selectreceiver();
     lgw_spi_w(addr, value);
@@ -639,7 +637,7 @@ void writeRegister(uint8_t addr, uint8_t value)
 }
 
 
-bool receivePkt(char *payload)
+static bool receivePkt(char *payload)
 {
 
     // clear rxDone
@@ -673,7 +671,7 @@ bool receivePkt(char *payload)
     return true;
 }
 
-void SetupLoRa()
+static void SetupLoRa()
 {
     digitalWrite(RST, HIGH);
     sleep(1);
@@ -747,7 +745,7 @@ void SetupLoRa()
 
 }
 
-void sendudp(char *msg, int length) {
+static void sendudp(char *msg, int length) {
 
 //send the update
 #ifdef SERVER1
@@ -778,7 +776,7 @@ void sendudp(char *msg, int length) {
 #endif
 }
 
-void sendstat() {
+static void sendstat() {
     static char status_report[STATUS_SIZE]; /* status report as a JSON object */
     char stat_timestamp[24];
     time_t t;
@@ -820,7 +818,7 @@ void sendstat() {
 
 }
 
-void receivepacket() {
+static void receivepacket() {
 
     long int SNR;
     int rssicorr;
@@ -1027,4 +1025,3 @@ int main () {
     return (0);
 
 }
-
