@@ -535,24 +535,6 @@ static int lgw_spi_open() {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-/* SPI release */
-static int lgw_spi_close() {
-
-    int a;
-
-    /* close file & deallocate file descriptor */
-    a = close(spidev);
-
-    /* determine return code */
-    if (a < 0) {
-        printf("ERROR: SPI PORT FAILED TO CLOSE\n");
-        return -1;
-    } else {
-        printf("Note: SPI port closed\n");
-        return 0;
-    }
-}
-
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* Simple write */
