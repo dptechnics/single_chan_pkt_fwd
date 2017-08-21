@@ -1,7 +1,7 @@
 # single_chan_pkt_fwd
 # Single Channel LoRaWAN Gateway
 
-CC=g++
+CC=gcc
 CFLAGS=-c -Wall
 
 all: single_chan_pkt_fwd
