@@ -13,6 +13,9 @@
  *
  */
 
+#define __USE_GNU
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
@@ -33,6 +36,9 @@
 #include <linux/spi/spidev.h>
 #include <time.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+       #include <sys/socket.h>
+       #include <netdb.h>
 
 #include "base64.h"
 
@@ -105,6 +111,7 @@ static char description[64] = "";                        /* used for free form d
 #define SERVER1 "54.72.145.119"    		// The Things Network: croft.thethings.girovito.nl
 //#define SERVER2 "192.168.1.10"      	// local
 #define PORT 1700                   	// The port on which to send data
+#define PORTNAME "1700"
 
 // #############################################
 // #############################################
@@ -669,9 +676,9 @@ bool receivePkt(char *payload)
 void SetupLoRa()
 {
     digitalWrite(RST, HIGH);
-    usleep(100000);
+    sleep(1);
     digitalWrite(RST, LOW);
-    usleep(100000);
+    sleep(1);
 
     uint8_t version = readRegister(REG_VERSION);
 
@@ -682,9 +689,9 @@ void SetupLoRa()
     } else {
         // sx1276?
         digitalWrite(RST, LOW);
-        usleep(100000);
+        sleep(1);
         digitalWrite(RST, HIGH);
-        usleep(100000);
+        sleep(1);
         version = readRegister(REG_VERSION);
         if (version == 0x12) {
             // sx1276
@@ -744,8 +751,19 @@ void sendudp(char *msg, int length) {
 
 //send the update
 #ifdef SERVER1
-    inet_aton(SERVER1 , &si_other.sin_addr);
-    if (sendto(s, (char *)msg, length, 0 , (struct sockaddr *) &si_other, slen)==-1)
+    struct addrinfo hints;
+    memset(&hints,0,sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = 0;
+    hints.ai_flags = AI_ADDRCONFIG;
+    struct addrinfo* res=0;
+    int err = getaddrinfo(SERVER1, PORTNAME, &hints, &res);
+    if (err!=0) {
+        printf("failed to resolve remote socket address (err=%d)",err);
+    }
+    
+    if (sendto(s, (char *)msg, length, 0 , res->ai_addr, res->ai_addrlen)==-1)
     {
         die("sendto()");
     }
@@ -961,6 +979,10 @@ int main () {
 
     struct timeval nowtime;
     uint32_t lasttime;
+    
+    gettimeofday(&nowtime, NULL);
+    uint32_t nowseconds = (uint32_t)(nowtime.tv_sec);
+    lasttime = nowseconds;
 
     lgw_spi_open();
 
@@ -991,7 +1013,7 @@ int main () {
         receivepacket();
 
         gettimeofday(&nowtime, NULL);
-        uint32_t nowseconds = (uint32_t)(nowtime.tv_sec);
+        nowseconds = (uint32_t)(nowtime.tv_sec);
         if (nowseconds - lasttime >= 30) {
             lasttime = nowseconds;
             sendstat();
@@ -999,9 +1021,10 @@ int main () {
             cp_nb_rx_ok = 0;
             cp_up_pkt_fwd = 0;
         }
-        usleep(1000);
+        //TODO: sleep
     }
 
     return (0);
 
 }
+
