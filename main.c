@@ -78,7 +78,7 @@ enum sf_t sf = SF7;
 // SX1272 - Raspberry connections
 int ssPin = 6;
 int dio0  = 7;
-int RST   = 0;
+int RST   = 22;
 
 #define LOW 		0
 #define HIGH 		1
