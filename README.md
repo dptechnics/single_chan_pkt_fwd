@@ -1,8 +1,5 @@
-*** IMPORTANT ***
-
-Please note this repository is deprecated, and the code is not up-to-date to use on The Things Network.
-
-This repository will not be further maintained. Please find another repository if you want to deploy a single channel gateway.
+Please note this repository is deprecated, and the code is not up-to-date to use on The Things Network as 
+it still implements the first version of the Semtech gateway protocol.
 
 
 Single Channel LoRaWAN Gateway
@@ -10,8 +7,7 @@ Single Channel LoRaWAN Gateway
 This repository contains a proof-of-concept implementation of a single
 channel LoRaWAN gateway.
 
-It has been tested on the Raspberry Pi platform, using a Semtech SX1272
-transceiver (HopeRF RFM92W), and SX1276 (HopeRF RFM95W).
+It has been tested on the DPTechnics DPT-Board using a SX1276 (HopeRF RFM95W).
 
 The code is for testing and development purposes only, and is not meant 
 for production usage. 
@@ -34,25 +30,8 @@ Not (yet) supported:
 
 Dependencies
 ------------
-- SPI needs to be enabled on the Raspberry Pi (use raspi-config)
-- WiringPi: a GPIO access library written in C for the BCM2835 
-  used in the Raspberry Pi.
-  sudo apt-get install wiringpi
-  see http://wiringpi.com
+- SPI needs to be installed and set-up on the DPT-Board
 - Run packet forwarder as root
-
-Connections
------------
-SX1272 - Raspberry
-
-3.3V   - 3.3V (header pin #1) 
-GND	   - GND (pin #6)
-MISO   - MISO (pin #21)
-MOSI   - MOSI (pin #19)
-SCK    - CLK (pin #23)
-NSS    - GPIO6 (pin #22)
-DIO0   - GPIO7 (pin #7)
-RST    - GPIO0 (pin #11)
 
 Configuration
 -------------
@@ -60,9 +39,9 @@ Configuration
 Defaults:
 
 - LoRa:   SF7 at 868.1 Mhz
-- Server: 54.229.214.112, port 1700  (The Things Network: croft.thethings.girovito.nl)
+- Server: 127.0.0.1, port 1680
 
-Edit source node (main.cpp) to change configuration (look for: "Configure these values!").
+Edit source node (main.c) to change configuration.
 
 Please set location, email and description.
 
