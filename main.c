@@ -793,11 +793,11 @@ static void sendstat() {
     strftime(stat_timestamp, sizeof stat_timestamp, "%F %T %Z", gmtime(&t));
 	
 	/* Prepare the JSON status data */
-    snprintf(status_report + data_offset, STATUS_SIZE - data_offset, "{\"stat\":{\"time\":\"%s\",\"lati\":%.5f,\"long\":%.5f,\"alti\":%i,\"rxnb\":%u,\"rxok\":%u,\"rxfw\":%u,\"ackr\":%.1f,\"dwnb\":%u,\"txnb\":%u}}", stat_timestamp, lat, lon, (int)alt, cp_nb_rx_rcv, cp_nb_rx_ok, cp_up_pkt_fwd, (float)0, 0, 0);
+    int json_len = snprintf(status_report + data_offset, STATUS_SIZE - data_offset, "{\"stat\":{\"time\":\"%s\",\"lati\":%.5f,\"long\":%.5f,\"alti\":%i,\"rxnb\":%u,\"rxok\":%u,\"rxfw\":%u,\"ackr\":%.1f,\"dwnb\":%u,\"txnb\":%u}}", stat_timestamp, lat, lon, (int)alt, cp_nb_rx_rcv, cp_nb_rx_ok, cp_up_pkt_fwd, (float)0, 0, 0);
     printf("stat update: %s\n", status_report + data_offset);
 
     /* send the update to the network server */
-    sendudp(status_report, data_offset);
+    sendudp(status_report, data_offset + json_len);
 }
 
 static void receivepacket() {
