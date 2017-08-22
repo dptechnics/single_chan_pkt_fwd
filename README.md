@@ -1,7 +1,3 @@
-Please note this repository is deprecated, and the code is not up-to-date to use on The Things Network as 
-it still implements the first version of the Semtech gateway protocol.
-
-
 Single Channel LoRaWAN Gateway
 ==============================
 This repository contains a proof-of-concept implementation of a single

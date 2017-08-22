@@ -99,11 +99,6 @@ int   alt=0;
 #define SPI_SPEED       8000000
 #define SPI_DEV_PATH    "/dev/spidev1.0"
 
-/* Informal status fields */
-static char platform[24]    = "Single Channel Gateway";  /* platform definition */
-static char email[40]       = "";                        /* used for contact email */
-static char description[64] = "";                        /* used for free form description */
-
 // define servers
 // TODO: use host names and dns
 #define SERVER1 "127.0.0.1"    		// The Things Network: croft.thethings.girovito.nl
@@ -174,46 +169,46 @@ static char description[64] = "";                        /* used for free form d
 
 #define BUFLEN 2048  //Max length of buffer
 
-#define PROTOCOL_VERSION  1
-#define PKT_PUSH_DATA 0
-#define PKT_PUSH_ACK  1
-#define PKT_PULL_DATA 2
-#define PKT_PULL_RESP 3
-#define PKT_PULL_ACK  4
+#define PROTOCOL_VERSION  	0x02
+#define PKT_PUSH_DATA 		0x00
+#define PKT_PUSH_ACK  		0x01
+#define PKT_PULL_DATA 		0x02
+#define PKT_PULL_RESP 		0x03	
+#define PKT_PULL_ACK  		0x04
 
 #define TX_BUFF_SIZE  2048
 #define STATUS_SIZE	  1024
 
 /* GPIO configuration, true if GPIO is exposed */
 const bool gpio_config[28] = {
-    true, /* GPIO 0 */
-    true, /* GPIO 1 */
-    false, /* GPIO 2 */
-    false, /* GPIO 3 */
-    false, /* GPIO 4 */
-    false, /* GPIO 5 */
-    true, /* GPIO 6 */
-    true, /* GPIO 7 */
-    true, /* GPIO 8 */
-    false, /* GPIO 9 */
-    false, /* GPIO 10 */
-    false, /* GPIO 11 */
-    true, /* GPIO 12 */
-    true, /* GPIO 13 */
-    true, /* GPIO 14 */
-    true, /* GPIO 15 */
-    true, /* GPIO 16 */
-    true, /* GPIO 17 */
-    true, /* GPIO 18 */
-    true, /* GPIO 19 */
-    true, /* GPIO 20 */
-    true, /* GPIO 21 */
-    true, /* GPIO 22 */
-    true, /* GPIO 23 */
-    true, /* GPIO 24 */
-    false, /* GPIO 25 */
-    false, /* GPIO 26 */
-    false, /* GPIO 27 */
+    true, 	/* GPIO 0 */
+    true, 	/* GPIO 1 */
+    false, 	/* GPIO 2 */
+    false, 	/* GPIO 3 */
+    false, 	/* GPIO 4 */
+    false, 	/* GPIO 5 */
+    true, 	/* GPIO 6 */
+    true, 	/* GPIO 7 */
+    true, 	/* GPIO 8 */
+    false, 	/* GPIO 9 */
+    false, 	/* GPIO 10 */
+    false, 	/* GPIO 11 */
+    true, 	/* GPIO 12 */
+    true, 	/* GPIO 13 */
+    true, 	/* GPIO 14 */
+    true, 	/* GPIO 15 */
+    true, 	/* GPIO 16 */
+    true, 	/* GPIO 17 */
+    true, 	/* GPIO 18 */
+    true, 	/* GPIO 19 */
+    true, 	/* GPIO 20 */
+    true, 	/* GPIO 21 */
+    true, 	/* GPIO 22 */
+    true, 	/* GPIO 23 */
+    true, 	/* GPIO 24 */
+    false, 	/* GPIO 25 */
+    false, 	/* GPIO 26 */
+    false, 	/* GPIO 27 */
 };
 
 /*
@@ -745,10 +740,8 @@ static void SetupLoRa()
 
 }
 
-static void sendudp(char *msg, int length) {
-
-//send the update
-#ifdef SERVER1
+static void sendudp(char *msg, int length) 
+{
     struct addrinfo hints;
     memset(&hints,0,sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -765,15 +758,6 @@ static void sendudp(char *msg, int length) {
     {
         die("sendto()");
     }
-#endif
-
-#ifdef SERVER2
-    inet_aton(SERVER2 , &si_other.sin_addr);
-    if (sendto(s, (char *)msg, length , 0 , (struct sockaddr *) &si_other, slen)==-1)
-    {
-        die("sendto()");
-    }
-#endif
 }
 
 static void sendstat() {
@@ -781,12 +765,17 @@ static void sendstat() {
     char stat_timestamp[24];
     time_t t;
 
-    int stat_index=0;
-
-    /* pre-fill the data buffer with fixed fields */
+    /* Set protocol version */
     status_report[0] = PROTOCOL_VERSION;
-    status_report[3] = PKT_PUSH_DATA;
 
+	/* Random token */
+    status_report[1] = (char) rand();
+    status_report[2] = (char) rand();
+	
+	/* Packet type */
+    status_report[3] = PKT_PUSH_DATA;
+	
+	/* Gateway UID */
     status_report[4] = (unsigned char) hwaddr[0];
     status_report[5] = (unsigned char) hwaddr[1];
     status_report[6] = (unsigned char) hwaddr[2];
@@ -796,30 +785,22 @@ static void sendstat() {
     status_report[10] = (unsigned char) hwaddr[4];
     status_report[11] = (unsigned char) hwaddr[5];
 
-    /* start composing datagram with the header */
-    uint8_t token_h = (uint8_t)rand(); /* random token */
-    uint8_t token_l = (uint8_t)rand(); /* random token */
-    status_report[1] = token_h;
-    status_report[2] = token_l;
-    stat_index = 12; /* 12-uint8_t header */
+	/* The offset to start writing the JSON data */
+    int data_offset = 12;
 
-    /* get timestamp for statistics */
+    /* Get the current time */
     t = time(NULL);
     strftime(stat_timestamp, sizeof stat_timestamp, "%F %T %Z", gmtime(&t));
+	
+	/* Prepare the JSON status data */
+    snprintf(status_report + data_offset, STATUS_SIZE - data_offset, "{\"stat\":{\"time\":\"%s\",\"lati\":%.5f,\"long\":%.5f,\"alti\":%i,\"rxnb\":%u,\"rxok\":%u,\"rxfw\":%u,\"ackr\":%.1f,\"dwnb\":%u,\"txnb\":%u}}", stat_timestamp, lat, lon, (int)alt, cp_nb_rx_rcv, cp_nb_rx_ok, cp_up_pkt_fwd, (float)0, 0, 0);
+    printf("stat update: %s\n", status_report + data_offset);
 
-    int j = snprintf((char *)(status_report + stat_index), STATUS_SIZE-stat_index, "{\"stat\":{\"time\":\"%s\",\"lati\":%.5f,\"long\":%.5f,\"alti\":%i,\"rxnb\":%u,\"rxok\":%u,\"rxfw\":%u,\"ackr\":%.1f,\"dwnb\":%u,\"txnb\":%u,\"pfrm\":\"%s\",\"mail\":\"%s\",\"desc\":\"%s\"}}", stat_timestamp, lat, lon, (int)alt, cp_nb_rx_rcv, cp_nb_rx_ok, cp_up_pkt_fwd, (float)0, 0, 0,platform,email,description);
-    stat_index += j;
-    status_report[stat_index] = 0; /* add string terminator, for safety */
-
-    printf("stat update: %s\n", (char *)(status_report+12)); /* DEBUG: display JSON stat */
-
-    //send the update
-    sendudp(status_report, stat_index);
-
+    /* send the update to the network server */
+    sendudp(status_report, data_offset);
 }
 
 static void receivepacket() {
-
     long int SNR;
     int rssicorr;
 
@@ -858,20 +839,17 @@ static void receivepacket() {
             char buff_up[TX_BUFF_SIZE]; /* buffer to compose the upstream packet */
             int buff_index=0;
 
-            /* gateway <-> MAC protocol variables */
-            //static uint32_t net_mac_h; /* Most Significant Nibble, network order */
-            //static uint32_t net_mac_l; /* Least Significant Nibble, network order */
+            /* Set protocol version */
+			buff_up[0] = PROTOCOL_VERSION;
 
-            /* pre-fill the data buffer with fixed fields */
-            buff_up[0] = PROTOCOL_VERSION;
+			/* Random token */
+			buff_up[1] = (char) rand();
+			buff_up[2] = (char) rand();
+			
+			/* The packet identifier */
             buff_up[3] = PKT_PUSH_DATA;
 
-            /* process some of the configuration variables */
-            //net_mac_h = htonl((uint32_t)(0xFFFFFFFF & (lgwm>>32)));
-            //net_mac_l = htonl((uint32_t)(0xFFFFFFFF &  lgwm  ));
-            //*(uint32_t *)(buff_up + 4) = net_mac_h;
-            //*(uint32_t *)(buff_up + 8) = net_mac_l;
-
+			/* The gateway UID */
             buff_up[4] = (unsigned char) hwaddr[0];
             buff_up[5] = (unsigned char) hwaddr[1];
             buff_up[6] = (unsigned char) hwaddr[2];
@@ -881,11 +859,7 @@ static void receivepacket() {
             buff_up[10] = (unsigned char) hwaddr[4];
             buff_up[11] = (unsigned char) hwaddr[5];
 
-            /* start composing datagram with the header */
-            uint8_t token_h = (uint8_t) rand(); /* random token */
-            uint8_t token_l = (uint8_t) rand(); /* random token */
-            buff_up[1] = token_h;
-            buff_up[2] = token_l;
+
             buff_index = 12; /* 12-uint8_t header */
 
             // TODO: tmst can jump is time is (re)set, not good.
@@ -898,6 +872,8 @@ static void receivepacket() {
             buff_index += 9;
             buff_up[buff_index] = '{';
             ++buff_index;
+			j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, "\"time\":%s", "2013-03-31T16:21:17.528002Z");
+            buff_index += j;
             j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, "\"tmst\":%u", tmst);
             buff_index += j;
             j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, ",\"chan\":%1u,\"rfch\":%1u,\"freq\":%.6lf", 0, 0, (double)freq/1000000);
