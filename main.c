@@ -876,7 +876,7 @@ static void receivepacket() {
             buff_index += 9;
             buff_up[buff_index] = '{';
             ++buff_index;
-			j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, "\"time\":%s", stat_timestamp);
+			j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, "\"time\":\"%s\"", stat_timestamp);
             buff_index += j;
             j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, ",\"tmst\":%u", tmst);
             buff_index += j;
