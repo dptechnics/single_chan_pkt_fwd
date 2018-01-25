@@ -866,15 +866,19 @@ static void receivepacket() {
             struct timeval now;
             gettimeofday(&now, NULL);
             uint32_t tmst = (uint32_t)(now.tv_sec*1000000 + now.tv_usec);
+		
+	    char stat_timestamp[24];
+            time_t t = time(NULL);
+            strftime(stat_timestamp, sizeof stat_timestamp, "%F %T %Z", gmtime(&t));
 
             /* start of JSON structure */
             memcpy((void *)(buff_up + buff_index), (void *)"{\"rxpk\":[", 9);
             buff_index += 9;
             buff_up[buff_index] = '{';
             ++buff_index;
-			j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, "\"time\":%s", "2013-03-31T16:21:17.528002Z");
+			j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, "\"time\":%s", stat_timestamp);
             buff_index += j;
-            j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, "\"tmst\":%u", tmst);
+            j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, ",\"tmst\":%u", tmst);
             buff_index += j;
             j = snprintf((char *)(buff_up + buff_index), TX_BUFF_SIZE-buff_index, ",\"chan\":%1u,\"rfch\":%1u,\"freq\":%.6lf", 0, 0, (double)freq/1000000);
             buff_index += j;
