@@ -971,7 +971,7 @@ int main () {
     si_other.sin_port = htons(PORT);
 
     /* display result */
-    printf("Reset: %d, DIO0: %d, Chip Select: %d\n, RST, dio0, ssPin);
+    printf("Reset: %d, DIO0: %d, Chip Select: %d\n", RST, dio0, ssPin);
     printf("Gateway ID: %.2x:%.2x:%.2x:ff:ff:%.2x:%.2x:%.2x\n",
            (unsigned char) hwaddr[0],
            (unsigned char) hwaddr[1],
